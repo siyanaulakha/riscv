@@ -1,4 +1,4 @@
-name: RTL simulation and synthesis
+name: RTL checks
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  simulate-and-synthesize:
+  rtl-checks:
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -17,55 +17,13 @@ jobs:
       - name: Install RTL tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y iverilog yosys make python3
+          sudo apt-get install -y iverilog verilator yosys make python3
 
-      - name: Record tool versions
-        run: |
-          mkdir -p results/ci
-          {
-            echo "commit=${GITHUB_SHA}"
-            echo "runner=$(uname -a)"
-            echo "iverilog=$(iverilog -V 2>&1 | head -n 1)"
-            echo "yosys=$(yosys -V 2>&1 | head -n 1)"
-            echo "python=$(python3 --version)"
-          } | tee results/ci/tool-versions.txt
+      - name: Run functional regressions
+        run: make test
 
-      - name: Structural audit
-        run: |
-          set -o pipefail
-          python3 scripts/check_repo.py 2>&1 | tee results/ci/structural-audit.log
+      - name: Run Verilator lint
+        run: make lint
 
-      - name: Compile and run smoke simulation
-        run: |
-          set -o pipefail
-          make sim 2>&1 | tee results/ci/iverilog-simulation.log
-
-      - name: Run synthesis sanity check
-        run: |
-          set -o pipefail
-          make synth 2>&1 | tee results/ci/yosys-synthesis-console.log
-          cp -f build/yosys.log results/ci/yosys.log
-
-      - name: Summarize generated files
-        if: always()
-        run: |
-          {
-            echo "## Repository status"
-            git status --short
-            echo
-            echo "## Build files"
-            find build results/ci -maxdepth 2 -type f -printf '%p %s bytes\n' 2>/dev/null | sort
-          } | tee results/ci/generated-files.txt
-
-      - name: Upload simulation and synthesis evidence
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: riscv-rtl-evidence-${{ github.run_number }}
-          if-no-files-found: warn
-          retention-days: 30
-          path: |
-            results/ci/**
-            build/**
-            *.vcd
-            *.fst
+      - name: Run Yosys synthesis check
+        run: make synth
