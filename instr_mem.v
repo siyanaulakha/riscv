@@ -38,7 +38,7 @@ $display("Instruction[1] = %h", instr_ram[1]);
 end
 
 
-assign instr = instr_ram[instr_addr[31:2]];
+assign instr = instr_ram[instr_addr[10:2]];
 
 endmodule
 
