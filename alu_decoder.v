@@ -31,7 +31,20 @@ module alu_decoder (
 always @(*) begin
     case (ALUOp)
         2'b00: ALUControl = 4'b0000;             // addition
-        2'b01: ALUControl = 4'b0001;             // subtraction
+        2'b01: begin // branch comparison
+            case (funct3)
+                3'b000,
+                3'b001: ALUControl = 4'b0001; // beq/bne: subtract
+
+                3'b100,
+                3'b101: ALUControl = 4'b0101; // blt/bge: signed SLT
+
+                3'b110,
+                3'b111: ALUControl = 4'b1001; // bltu/bgeu: unsigned SLT
+
+                default: ALUControl = 4'b0001;
+            endcase
+        end
         default:
             case (funct3) // R-type or I-type ALU
                 3'b000: begin

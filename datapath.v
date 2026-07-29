@@ -29,7 +29,7 @@ module datapath (
     input [1:0]   ImmSrc,
     input [3:0]   ALUControl,
 	input 		  Jalr,
-    output        Zero, ALUR31,
+    output        Zero, LessThan,
     output [31:0] PC,
     input  [31:0] Instr,
     output [31:0] Mem_WrAddr, Mem_WrData,
@@ -62,7 +62,7 @@ mux2 #(32)		LauiPCmux(AuiPC, {Instr[31:12], 12'b0}, Instr[5], LauiPC);
 //result mux
 mux4 #(32)     resultmux(ALUResult, ReadData, PCPlus4, LauiPC, ResultSrc, Result);
 
-assign ALUR31 = ALUResult[31];
+assign LessThan = ALUResult[0];
 assign Mem_WrData = WriteData;
 assign Mem_WrAddr = ALUResult;
 

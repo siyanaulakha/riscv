@@ -25,7 +25,7 @@
 module main_decoder (
     input  [6:0] op,
     input  [2:0] funct3,
-    input        Zero, ALUR31,        // Zero: result from SUB, ALUR31: sign bit of result
+    input        Zero, LessThan,        // Zero: equality flag; LessThan: SLT/SLTU result bit
     output [1:0] ResultSrc,
     output       MemWrite, Branch, ALUSrc,
     output       RegWrite, Jump, Jalr,
@@ -35,11 +35,9 @@ module main_decoder (
 
 reg [10:0] controls;
 reg TakeBranch;
-reg ALUUnsigned;  // Additional signal for unsigned comparisons
 
 always @(*) begin
     TakeBranch = 0;
-    ALUUnsigned = 0;  // Reset ALUUnsigned for signed comparisons by default
     casez (op)
         // RegWrite_ImmSrc_ALUSrc_MemWrite_ResultSrc_ALUOp_Jump_Jalr
         7'b0000011: controls = 11'b1_00_1_0_01_00_0_0; // lw
@@ -50,16 +48,11 @@ always @(*) begin
             case (funct3)
                 3'b000: TakeBranch =  Zero;       // beq
                 3'b001: TakeBranch = !Zero;       // bne
-                3'b100: TakeBranch =  ALUR31;     // blt (signed)
-                3'b101: TakeBranch = !ALUR31;     // bge (signed)
-                3'b110: begin                     // bltu (unsigned)
-                    ALUUnsigned = 1;
-                    TakeBranch = ALUR31;          // If result is negative, a < b (unsigned)
-                end
-                3'b111: begin                     // bgeu (unsigned)
-                    ALUUnsigned = 1;
-                    TakeBranch = !ALUR31;         // If result is non-negative, a >= b (unsigned)
-                end
+                3'b100: TakeBranch =  LessThan;   // blt
+                3'b101: TakeBranch = !LessThan;   // bge
+                3'b110: TakeBranch =  LessThan;   // bltu
+                3'b111: TakeBranch = !LessThan;   // bgeu
+                default: TakeBranch = 1'b0;        // illegal branch funct3
             endcase
         end
         7'b0010011: controls = 11'b1_00_1_0_00_10_0_0; // I-type ALU
